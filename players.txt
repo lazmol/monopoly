@@ -1,0 +1,4 @@
+# 0 greedy, 1 careful, 2 tactical
+0 MohoMohikan
+1 OvatosDuhaj
+2 TaktikusTikitaka
