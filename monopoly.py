@@ -1,62 +1,66 @@
 import random
+from typing import Union, List
+
+Num = Union[int, float]
 
 
 class Player():
     # some params
-    safety_factor = 1  # 1 = buys as long as there is enough money, 2 = buys when he has twice the money
-    buy_every = 1  # 1 = buys every round, 3 = buy 1st chance then skips two chances
+    safety_factor: Num = 1  # 1 = buys as long as there is enough money, 2 = buys when he has twice the money
+    buy_every: int = 1  # 1 = buys every round, 3 = buy 1st chance then skips two chances
 
-    def __init__(self, name):
-        self.__name = name
-        self.__position = 0  # position on the board
-        self.__money = 10000  # init money
-        self.__ind_roll = 0  # the order that tells which player rolls first etc
-        self.__chances2buy = -1
-        self.__estates = []
+    def __init__(self, name: str) -> None:
+        self.__name: str = name
+        self.__position: int = 0  # position on the board
+        self.__money: Num = 10000  # init money
+        self.__ind_roll: int = 0  # the order that tells which player rolls first etc
+        self.__chances2buy: int = -1
+        self.__estates: List['FieldEstate'] = []
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.__name
 
-    def get_money(self):
+    def get_money(self) -> Num:
         return self.__money
 
-    def set_money(self, diff):
+    def set_money(self, diff: Num) -> None:
         self.__money += diff
 
-    def get_position(self):
+    def get_position(self) -> None:
         return self.__position
 
-    def set_position(self, rolled_num, n_fields):
+    def set_position(self, rolled_num: int, n_fields: int):
         self.__position = (self.__position + rolled_num) % n_fields
 
-    def get_ind_roll(self):
+    def get_ind_roll(self) -> int:
+        '''Index for the order of rolling dice.'''
         return self.__ind_roll
 
-    def set_ind_roll(self, num):
+    def set_ind_roll(self, num: int) -> None:
         self.__ind_roll = num
 
-    def add_estate(self, field_estate):
+    def add_estate(self, field_estate: 'FieldEstate') -> None:
         self.__estates.append(field_estate)
 
-    def eliminate(self):
+    def eliminate(self) -> None:
         for estate in self.__estates:
             estate.abandon()
 
-    def step(self, field_estate):
+    def step_on_estate(self, field_estate: 'FieldEstate') -> None:
         self.__chances2buy += 1
         can_buy = self.__chances2buy % self.buy_every == 0
         # self = current player
         estate = field_estate
         owner = estate.get_owner()
-        with_house = estate.with_house
+        housed = estate.get_housed()
         if not owner and can_buy and self.__money >= estate.price_estate * self.safety_factor:
             estate.buy_estate(self)
 
         elif owner == self:  # player on the field owns it
-            if not with_house and can_buy and self.__money >= estate.price_house * self.safety_factor:
+            if not housed and can_buy and self.__money >= estate.price_house * self.safety_factor:
                 estate.buy_house(self)
         else:  # somebody else owns it
-            if owner and with_house:
+            if owner and housed:
                 fee = (estate.price_estate + estate.price_house) * estate.fee_factor
             elif owner:
                 fee = estate.price_estate * estate.fee_factor
@@ -88,86 +92,89 @@ class PlayerTactical(Player):
 
 class Field():
     '''Prototype Field'''
-    def __init__(self, pos):
-        self.__pos = pos
+    def __init__(self, pos: int) -> None:
+        self.__pos: int = pos
 
     def get_pos(self):
         return self.__pos
 
 
 class FieldEstate(Field):
-    price_estate = 1000
-    price_house = 4000
-    fee_factor = 0.5  # the amount claimed as fee  from other players (multiplied by price of estate + house)
+    price_estate: int = 1000
+    price_house: int = 4000
+    fee_factor: float = 0.5  # the amount claimed as fee from other players (multiplied by price of estate + house)
 
-    def __init__(self, pos):
+    def __init__(self, pos: int) -> None:
         super().__init__(pos)
-        self.__owner = None
-        self.with_house = False
+        self.__owner: Player = None
+        self.__housed: bool = False
 
-    def get_owner(self):
+    def get_owner(self) -> Player:
         return self.__owner
 
-    def abandon(self):
-        self.__owner = None
-        self.with_house = False
+    def get_housed(self) -> bool:
+        return self.__housed
 
-    def buy_estate(self, player):
+    def abandon(self) -> None:
+        self.__owner = None
+        self.__housed = False
+
+    def buy_estate(self, player: Player) -> None:
         self.__owner = player
         player.add_estate(self)
         player.set_money(-1 * self.price_estate)
         print(f'Player: {player.get_name()} bought estate on position: {self.get_pos()}.')
 
-    def buy_house(self, player):
-        self.with_house = True
+    def buy_house(self, player: Player) -> None:
+        self.__housed = True
         player.set_money(1 * self.price_house)
         print(f'Player: {player.get_name()} built a house on position: {self.get_pos()}.')
 
-    def act_on_player(self, player):
-        player.step(self)
+    def act_on_player(self, player: Player) -> None:
+        player.step_on_estate(self)
 
-    def sell_estate(self, Player):
+    def sell_estate(self, seller: Player, buyer: Player) -> None:
         '''Not required'''
         pass
 
 
 class FieldLuck(Field):
-    def __init__(self, pos, prize):
+    def __init__(self, pos: int, prize: Num) -> None:
         super().__init__(pos)
         self.__delta_money = prize
 
-    def get_delta_money(self):
+    def get_delta_money(self) -> None:
         return self.__delta_money
 
-    def act_on_player(self, player):
+    def act_on_player(self, player: Player) -> None:
         player.set_money(self.__delta_money)
         print(f'Player: {player.get_name()} lost/received money on luck/Service field: {self.get_pos()}, {self.__delta_money}')
 
 
 class FieldService(FieldLuck):
-    def __init__(self, pos, cost):
+    def __init__(self, pos: int, cost: Num) -> None:
         super().__init__(pos, cost)
         self.__delta_money = -1 * cost  # does not seem to work why??
 
 
 class Game():
-    field_types = [FieldEstate, FieldLuck, FieldService]
-    player_types = [PlayerGreedy, PlayerCareful, PlayerTactical]
+    field_types: List[Field] = [FieldEstate, FieldLuck, FieldService]
+    player_types: List[Player] = [PlayerGreedy, PlayerCareful, PlayerTactical]
 
-    def __init__(self):
-        self.__fields = self.load_fields()
-        self.__n_fields = len(self.__fields)
-        self.__players = self.load_players()
-        self.__players_ranking = []
-        self.__rounds = 0
+    def __init__(self) -> None:
+        self.__fields: List[Field] = self.load_fields()
+        self.__n_fields: int = len(self.__fields)
+        self.__players: List[Player] = self.load_players()
+        self.__players_ranking: List[Player] = []
+        self.__rounds: int = 0
 
-    def get_fields(self):
+    def get_fields(self) -> List[Field]:
         return self.__fields
 
-    def get_players(self):
+    def get_players(self) -> List[Player]:
         return self.__players
 
-    def load_fields(self, inp_file_fields='fields.txt'):
+    def load_fields(self, inp_file_fields='fields.txt') -> List[Field]:
         fields = []
         with open(inp_file_fields, 'rU') as fh:  # skip comment or empty lines
             lines = map(lambda x: x.strip(), fh.readlines())
@@ -181,7 +188,7 @@ class Game():
                 fields.append(self.field_types[i_field_type](pos, price))
         return fields
 
-    def load_players(self, inp_file_players='players.txt'):
+    def load_players(self, inp_file_players='players.txt') -> List[Player]:
         '''<tactics> <name>'''
         players = []
         with open(inp_file_players, 'rU') as fh:
@@ -194,7 +201,7 @@ class Game():
                 players.append(self.player_types[tact](name))  # initialize correct class
         return players
 
-    def play(self):
+    def play(self) -> None:
         while len(self.__players_ranking) < (len(self.__players) - 1):  # while the winning order is found
             self.__rounds += 1
             for p in self.__players:
@@ -215,7 +222,7 @@ class Game():
         for i, p in enumerate(self.__players_ranking):
             print(f'{i}, {p.get_name()}, {p.get_money()}')
 
-    def roll_dice(self):
+    def roll_dice(self) -> int:
         return random.randint(1, 7)
 
     def turn_order(self):
