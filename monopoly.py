@@ -146,6 +146,9 @@ class FieldLuck(Field):
     def get_delta_money(self) -> None:
         return self.__delta_money
 
+    def set_delta_money(self, delta: Num) -> None:
+        self.__delta_money = delta
+
     def act_on_player(self, player: Player) -> None:
         player.set_money(self.__delta_money)
         print(f'Player: {player.get_name()} lost/received money on luck/Service field: {self.get_pos()}, {self.__delta_money}')
@@ -154,7 +157,7 @@ class FieldLuck(Field):
 class FieldService(FieldLuck):
     def __init__(self, pos: int, cost: Num) -> None:
         super().__init__(pos, cost)
-        self.__delta_money = -1 * cost  # does not seem to work why??
+        self.set_delta_money(-1 * cost)
 
 
 class Game():
