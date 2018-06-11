@@ -163,6 +163,7 @@ class FieldService(FieldLuck):
 class Game():
     field_types: List[Field] = [FieldEstate, FieldLuck, FieldService]
     player_types: List[Player] = [PlayerGreedy, PlayerCareful, PlayerTactical]
+    max_rounds: int = 120
 
     def __init__(self) -> None:
         self.__fields: List[Field] = self.load_fields()
@@ -205,7 +206,8 @@ class Game():
         return players
 
     def play(self) -> None:
-        while len(self.__players_ranking) < (len(self.__players) - 1):  # while the winning order is found
+        while (len(self.__players_ranking) < len(self.__players) - 1 and
+               self.__rounds <= self.max_rounds):  # while the winning order is found
             self.__rounds += 1
             for p in self.__players:
                 if p in self.__players_ranking:  # player already eliminated
